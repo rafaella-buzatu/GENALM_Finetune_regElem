@@ -1,4 +1,5 @@
 library(writexl)
+library(matrixStats)
 
 
 #### DEFINE FUNCTIONS
@@ -27,13 +28,32 @@ addDNAsequences <- function (regionData){
   return (regionData)
 }
 
+subsetPeaks <- function (ATACseqData, subsetBy){
+  
+  #Empty vector to store variance per region
+  rowSD <- c()
+  pb = txtProgressBar(min = 0, max = nrow (ATACseqData), style = 3, width = 50) 
+  #Calculate variance per region and fill in vector
+  for (i in seq(1, nrow(ATACseqData), 3457)){
+    rowSD <- c(rowSD, rowSds(as.matrix(ATACseqData[i:(i+3456),])))
+    setTxtProgressBar(pb, i)
+  }
+  close(pb)
+  
+  #Subset based on variance 
+  ATACsubset <- ATACseqData[which(rowSD> summary(rowSD)[subsetBy]), ]
+  
+  return (ATACsubset)
+}
+
 ### SCRIPT
 
 #Read input files with peaks
 ATACseqData <- readRDS('data/SNAREseqData/Zhang_BICCN-H_20190523-20190611_huMOp_Final_AC_Peaks.RDS')
 metadata <- read.delim('data/SNAREseqData/Zhang_BICCN-H_20190523-20190611_huMOp_Final_Sample_Metadata.txt')
 
-#ATACseqData = ATACseqData[1:1000,]
+#subset peaks 
+ATACseqData = subsetPeaks (ATACseqData, 'Median')
 
 ### Get matrix with all DNA regions
 
@@ -68,6 +88,10 @@ if (!dir.exists(file.path ('data'))){
 }
 write.csv(DNAregions, file.path('data/DNAregions.xlsx'), row.names=FALSE)
 
+
+##REad
+DNAregions <- read.csv('data/DNAregions.xlsx')
+
 #### Get input dataframe
 
 columns = c('peaks', 'cellType')
@@ -78,7 +102,7 @@ pb = txtProgressBar(min = 0, max = ncol (ATACseqData), style = 3, width = 50)
 for (cell in 1:ncol (ATACseqData)){
   
   #Get peaks which have reads for the particular cell
-  regionsWithReads = row.names(ATACseqData)[which (ATACseqData[, cell]>0)]
+  regionsWithReads = row.names(ATACseqData)[which (ATACseqData[, cell]>1)]
   #Remove regions in X and Y chromosomes
   regionsWithReads <- Filter(function(x) !any(grepl("chrX", x)), regionsWithReads)
   regionsWithReads <- Filter(function(x) !any(grepl("chrY", x)), regionsWithReads)
@@ -103,8 +127,5 @@ inputDF<-subset(inputDF, inputDF$peak!="")
 if (!dir.exists(file.path ('data'))){
   dir.create(file.path ('data'))
 }
-write.csv(inputDF, file.path('data/ATACpeaksPerCell.csv'), row.names=FALSE)
-
-
-
+write.csv(inputDF, file.path('data/ATACpeaksPerCell2.csv'), row.names=FALSE)
 

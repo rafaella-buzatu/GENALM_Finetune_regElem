@@ -144,7 +144,7 @@ def encode(dataset, tokenizer):
 
     encodings = tokenizer.batch_encode_plus(
         text,
-        max_length=512,  # max len of BERT
+        max_length=4096,  # max len of BigBird
         padding=True,
         truncation=True,
         return_attention_mask=True,
