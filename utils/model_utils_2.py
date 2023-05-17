@@ -167,7 +167,7 @@ def compute_metrics(eval_preds):
     )
     acc = accuracy_score(labels, predictions)
 
-    auc = roc_auc_score (labels, predictions, multi_class="ovr", average="micro")
+    auc = roc_auc_score (labels, predictions)
 
     return {"accuracy": acc, "auc": auc, "precision": precision, "recall": recall, "f1": f1}
 

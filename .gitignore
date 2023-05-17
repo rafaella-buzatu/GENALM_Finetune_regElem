@@ -2,3 +2,5 @@
 data/
 
 .Rhistory
+
+utils/__pycache__/

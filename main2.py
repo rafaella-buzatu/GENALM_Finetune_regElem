@@ -6,18 +6,18 @@ Created on Tue May  9 11:36:03 2023
 """
 
 import pandas as pd
-from utils.model_utils import setSeed, addLabels, splitTrainTestVal, load_model
-from utils.model_utils import encode, ClassificationTrainer, compute_metrics
-from utils.model_utils import predictMultiple, savePickl
+from utils.model_utils_2 import setSeed, addLabels, splitTrainTestVal, load_model
+from utils.model_utils_2 import encode, ClassificationTrainer, compute_metrics
+from utils.model_utils_2 import predictMultiple, savePickl
 from utils.plots import plotLoss, plotConfusionMatrices
 import os
 from transformers import TrainingArguments
 import pickle
 
-modelName = 'fineTuned'
+modelName = 'fineTunedSubset'
 
 sequenceDF = pd.read_csv('data/ATACpeaksPerCell.csv')
-#sequenceDF = sequenceDF.drop(sequenceDF[sequenceDF['cellType'] == 'Non-Neuronal'].index).reset_index()
+sequenceDF = sequenceDF.drop(sequenceDF[sequenceDF['cellType'] == 'Non-Neuronal'].index).reset_index()
 #Add numerical labels
 sequenceDF, label_dict = addLabels(sequenceDF)
 
@@ -31,6 +31,9 @@ trainSet, testSet, valSet = splitTrainTestVal (sequenceDF,
 
 ### TRAINING
 numClasses = len(label_dict.keys())
+
+#Remove input df variable
+del sequenceDF
 
 #Load model
 model_config = {
