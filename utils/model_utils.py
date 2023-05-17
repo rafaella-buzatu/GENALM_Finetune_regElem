@@ -13,8 +13,11 @@ from transformers import (
 )
 import random
 import numpy as np
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, roc_auc_score
 from sklearn.utils import shuffle
+from collections import Counter
+from operator import itemgetter
+import pandas as pd
 
 def setSeed (seed_val):
     #Set random seeds
@@ -37,26 +40,44 @@ def addLabels(dataset):
 
 def  splitTrainTestVal (inputDF, testSize, valSize):
     
-    random.seed(10)
-    indices = inputDF.index.tolist()
-    #Get test index
-    testIndex = random.sample(indices, int(testSize*len(indices)))
-    trainValIndex = list(set(indices) - set(testIndex))
-    #Get validation indices
-    valIndex = random.sample(trainValIndex, int(valSize*len(trainValIndex)))
-    #Get training idices
-    trainIndex = list(set(trainValIndex) - set(valIndex))
-    #Subset the dataframe using the train and test indices
-    trainSet = inputDF.iloc[trainIndex, :]
-    valSet = inputDF.iloc[valIndex, :]
-    testSet = inputDF.iloc[testIndex, :]
+    #Get number of records for smallest class
+    minClass, minClassCount = min(Counter(inputDF['label']).items(), key=itemgetter(1))
+    
+    balancedDFTest = pd.DataFrame()
+    balancedDFTrain = pd.DataFrame()
+    balancedDFVal = pd.DataFrame()
+    
+    #Balance the classes
+    for label in np.unique(inputDF['label']):
+        #Get only the records of a given class
+        inputDFClass = inputDF[inputDF['label'] == label]
+        #Subset the df 
+        inputDFClass = inputDFClass.sample(n=minClassCount)
+        #Get all indices
+        indices = inputDFClass.reset_index().index.tolist()
+        #Get test index
+        testIndex = random.sample(indices, int(testSize*len(indices)))
+        trainValIndex = list(set(indices) - set(testIndex))
+        #Get validation indices
+        valIndex = random.sample(trainValIndex, int(valSize*len(trainValIndex)))
+        #Get training idices
+        trainIndex = list(set(trainValIndex) - set(valIndex))
+        #Subset the dataframe using the train and test indices
+        trainSet = inputDFClass.iloc[trainIndex, :]
+        valSet = inputDFClass.iloc[valIndex, :]
+        testSet = inputDFClass.iloc[testIndex, :]
+        #append to new DFs
+        balancedDFTest = pd.concat ([balancedDFTest, testSet])
+        balancedDFTrain = pd.concat ([balancedDFTrain, trainSet])
+        balancedDFVal = pd.concat ([balancedDFVal, valSet])
+        
     
     #Shuffle train and validation sets
-    trainSet = shuffle(trainSet, random_state = 10)
-    valSet = shuffle(valSet, random_state = 10)
+    balancedDFTrain = shuffle(balancedDFTrain)
+    balancedDFVal = shuffle(balancedDFVal, random_state = 10)
 
     
-    return trainSet, testSet, valSet
+    return balancedDFTrain, balancedDFTest, balancedDFVal
 
 
 
@@ -135,7 +156,10 @@ def compute_metrics(eval_preds):
         labels, predictions, average="weighted"
     )
     acc = accuracy_score(labels, predictions)
-    return {"accuracy": acc, "precision": precision, "recall": recall, "f1": f1}
+
+    auc = roc_auc_score (labels, predictions, multi_class="ovr", average="micro")
+
+    return {"accuracy": acc, "auc": auc, "precision": precision, "recall": recall, "f1": f1}
 
 
 def encode(dataset, tokenizer):

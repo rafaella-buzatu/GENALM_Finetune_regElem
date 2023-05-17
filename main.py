@@ -8,10 +8,11 @@ Created on Tue May  9 11:36:03 2023
 import pandas as pd
 from utils.model_utils import setSeed, addLabels, splitTrainTestVal, load_model
 from utils.model_utils import encode, ClassificationTrainer, compute_metrics
+from utils.plots import plotLoss, plotConfusionMatrices
 import os
 from transformers import TrainingArguments
 
-sequenceDF = pd.read_csv('data/ATACpeaksPerCell.csv')
+sequenceDF = pd.read_csv('data/ATACpeaksPerCell2.csv')
 
 #Add numerical labels
 sequenceDF, label_dict = addLabels(sequenceDF)
@@ -65,7 +66,7 @@ training_args = TrainingArguments(
     evaluation_strategy="epoch",
     save_strategy="epoch",
     save_total_limit=2,
-    metric_for_best_model="accuracy",
+    metric_for_best_model="auc",
     load_best_model_at_end=True,
     weight_decay=0.01
 )
@@ -82,3 +83,49 @@ trainer = ClassificationTrainer(
 
 #Start training
 trainer.train()
+
+#Save training log
+trainingLog = trainer.state.log_history
+savePickl (outputDir, 'trainingLog', trainingLog)
+
+#Plot loss during training
+plotLoss (trainingLog, outputDir)
+
+#Evaluate the model on the test dataset
+trainer.eval_dataset=testEncodings
+trainer.evaluate()
+
+
+#Save the model
+model.save_pretrained(outputDir)
+
+# #Load finetuned model and tokenizer from DNABERT_6
+model_config = {
+    "model_HF_path": outputDir, #path to model
+    "model_HF_path_tokenizer": 'AIRI-Institute/gena-lm-bigbird-base-t2t', #path to tokenizer
+    "num_classes": numClasses }
+model, tokenizer, device = load_model(model_config, return_model=True)
+model.eval()
+
+
+# #Predict test set and calculate loss
+loss, predictions = predictMultiple (testSet, model, tokenizer, device)
+
+# #Save results 
+results = {"loss": float(loss),
+           "true": testSet.iloc[:, -1],
+           "predictions": predictions.detach().numpy()}
+
+pathToResults = os.path.join("outputs","results")
+if not os.path.exists(pathToResults):
+    os.makedirs(pathToResults)
+    
+filehandler = open(os.path.join(pathToResults, 'results'), 'wb') 
+pickle.dump(results, filehandler)
+
+#Load results from pickle
+with open(os.path.join(pathToResults, 'results'), 'rb') as f:
+    results = pickle.load(f)
+
+#Plot confusion matrix
+plotConfusionMatrices (results, pathToResults, label_dict)
