@@ -161,20 +161,20 @@ def compute_metrics(eval_preds):
 
     predictions, labels = eval_preds
     predictions = np.argmax(predictions, axis=1)
-
+    
     precision, recall, f1, _ = precision_recall_fscore_support(
         labels, predictions, average="weighted"
     )
     acc = accuracy_score(labels, predictions)
 
-    auc = roc_auc_score (labels, predictions, multi_class="ovr", average="micro")
+    #auc = roc_auc_score (labels, predictions, multi_class="ovr", average="micro", needs_proba=True)
 
-    return {"accuracy": acc, "auc": auc, "precision": precision, "recall": recall, "f1": f1}
+    return {"accuracy": acc, "precision": precision, "recall": recall, "f1": f1}
 
 
 def encode(dataset, tokenizer):
     text = dataset['peaks'].tolist()
-    y_train = np.float32(dataset['label'].values)
+    y_train = dataset['label'].values
 
     encodings = tokenizer.batch_encode_plus(
         text,
@@ -191,33 +191,34 @@ def encode(dataset, tokenizer):
     return datasetHF
 
 
-def predictMultiple (testSet, model, tokenizer, device, cellType):
+def predictMultiple (testSet, model, tokenizer, device):
     
-    inputs = tokenizer(testSet['sequences'].tolist(), return_tensors="pt")
+    inputs = tokenizer(testSet['peaks'].tolist(), 
+                       max_length=4096, return_tensors="pt",
+                       padding=True, truncation=True)
     inputs.to(device)
-    labels = torch.tensor(testSet[cellType].tolist()).unsqueeze(0)  # Batch size 1
+    labels = torch.tensor(testSet['label'])  # Batch size 1
+    
     with torch.no_grad():
         outputs = model(**inputs, labels=labels)
     loss, logits = outputs[:2]
     
-    return loss, logits
+    
+    predictions = np.argmax(logits, axis=1)
+    acc = accuracy_score(labels, predictions)
 
-def predictSingle (testSeq, model, tokenizer, device):
     
-    inputs = tokenizer(testSeq['sequence'], return_tensors="pt")
-    inputs.to(device)
-    labels = torch.tensor(testSeq['label']).unsqueeze(0)  # Batch size 1
-    outputs = model(**inputs, labels=labels)
-    loss, logits = outputs[:2]
-    
-    return loss, logits
+    return loss, predictions, acc
+
 
 class ClassificationTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
+        if torch.cuda.is_available():
+            device = torch.device("cuda:0")
         labels = inputs.pop("labels")
+        labels.to(device)
         outputs = model(**inputs)
-        logits = outputs[0][:, 0]
-        logits = logits.unsqueeze(1)
+        logits = outputs[0]
         loss = torch.nn.functional.cross_entropy(logits, labels)
         return (loss, outputs) if return_outputs else loss
 

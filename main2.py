@@ -6,9 +6,9 @@ Created on Tue May  9 11:36:03 2023
 """
 
 import pandas as pd
-from utils.model_utils_2 import setSeed, addLabels, splitTrainTestVal, load_model
-from utils.model_utils_2 import encode, ClassificationTrainer, compute_metrics
-from utils.model_utils_2 import predictMultiple, savePickl
+from utils.model_utils import setSeed, addLabels, splitTrainTestVal, load_model
+from utils.model_utils import encode, ClassificationTrainer, compute_metrics
+from utils.model_utils import predictMultiple, savePickl
 from utils.plots import plotLoss, plotConfusionMatrices
 import os
 from transformers import TrainingArguments
@@ -18,6 +18,7 @@ modelName = 'fineTunedSubset'
 
 sequenceDF = pd.read_csv('data/ATACpeaksPerCell.csv')
 sequenceDF = sequenceDF.drop(sequenceDF[sequenceDF['cellType'] == 'Non-Neuronal'].index).reset_index()
+
 #Add numerical labels
 sequenceDF, label_dict = addLabels(sequenceDF)
 
@@ -29,11 +30,27 @@ trainSet, testSet, valSet = splitTrainTestVal (sequenceDF,
                                                testSize = 0.2, 
                                                valSize = 0.2)
 
-### TRAINING
-numClasses = len(label_dict.keys())
+#Save to csv
+pathToData = os.path.join ("data/rawData/", modelName)
+if not os.path.exists(pathToData):
+    os.makedirs(pathToData)
+    
+trainSet.to_csv(os.path.join (pathToData, "train.csv"), index=False)
+testSet.to_csv(os.path.join (pathToData, "test.csv"), index=False)
+valSet.to_csv(os.path.join (pathToData, "val.csv"), index=False)
+
+#Save label dictionary
+savePickl (pathToData, 'labelDict', label_dict)
+
 
 #Remove input df variable
 del sequenceDF
+
+### TRAINING
+numClasses = len(label_dict.keys())
+outputDir = os.path.join("outputs", "models", modelName)
+if not os.path.exists(outputDir):
+    os.makedirs(outputDir)
 
 #Load model
 model_config = {
@@ -48,16 +65,17 @@ trainEncodings = encode(trainSet, tokenizer)
 valEncodings = encode(valSet, tokenizer)
 testEncodings = encode(testSet, tokenizer)
 
+#Remove initial variables after tokenizetion
+del trainSet
+del valSet
+del testSet
 
 #Define training parameters
 LEARNING_RATE = 2e-5
 MAX_LENGTH = 512
-BATCH_SIZE = 32
+BATCH_SIZE = 8
 EPOCHS = 10
 
-outputDir = os.path.join("outputs", "models", modelName)
-if not os.path.exists(outputDir):
-    os.makedirs(outputDir)
 
 training_args = TrainingArguments(
     output_dir=outputDir,
@@ -110,11 +128,13 @@ model, tokenizer, device = load_model(model_config, return_model=True)
 model.eval()
 
 
+testSet = pd.read_csv(os.path.join ("data/rawData", modelName, "test.csv"))
 # #Predict test set and calculate loss
-loss, predictions = predictMultiple (testSet, model, tokenizer, device)
+loss, predictions, accuracy = predictMultiple (testSet, model, tokenizer, device)
 
 # #Save results 
 results = {"loss": float(loss),
+           "accuracy": accuracy,
            "true": testSet.iloc[:, -1],
            "predictions": predictions.detach().numpy()}
 

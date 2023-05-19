@@ -4,3 +4,9 @@ data/
 .Rhistory
 
 utils/__pycache__/
+
+outputs/results/fineTuned/results
+
+outputs/results/fineTuned/
+
+outputs/models/fineTuned/

@@ -5,36 +5,25 @@ Created on Fri May  5 15:39:10 2023
 @author: rafae
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
 import os
+import pandas as pd
+import seaborn as sns
 from matplotlib.pyplot import figure
-import matplotlib.offsetbox as offsetbox
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-
+from sklearn.metrics import confusion_matrix
 
 def plotConfusionMatrices(results, pathToPlots, label_dict):   
-    
-    f, axes = plt.subplots(3, 5, figsize=(25, 15))
-    axes = axes.ravel()
-    for i in range(len(label_dict.keys())):
-        indexClass = results[results['true']==i].index
-        disp = ConfusionMatrixDisplay(confusion_matrix(results[true][indexClass],
-                                                       results[predictions][indexClass]),
-                                    display_labels=[0, i])
-        disp.plot(ax=axes[i], values_format='.4g')
-        disp.ax_.set_title(label_dict[i])
-        if i<10:
-            disp.ax_.set_xlabel('')
-        if i%5!=0:
-            disp.ax_.set_ylabel('')
-        disp.im_.colorbar.remove()
 
-    plt.subplots_adjust(wspace=0.10, hspace=0.1)
-    f.colorbar(disp.im_, ax=axes)
+    CM = confusion_matrix(results['true'], results['predictions'])
+    cm_df = pd.DataFrame(CM, index = label_dict.keys(), columns = label_dict.keys())
+    plt.figure(figsize=(8, 6), dpi=200)
+    sns.heatmap(cm_df, annot=True)
+    plt.title('Confusion Matrix')
+    plt.ylabel('Actal Values')
+    plt.xlabel('Predicted Values')
+    plt.savefig(os.path.join(pathToPlots, 'confusionMatrix.png'))
     plt.show()
-    
-    
+   
 def plotLoss (trainingLog, pathToPlots):
     
     #Extract indices of evaluation and training steps from training log
