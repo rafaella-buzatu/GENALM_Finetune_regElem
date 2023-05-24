@@ -131,6 +131,7 @@ for (cell in 1:ncol (ATACseqData)){
   
   #Subset the regions so that only the differentially accesible peaks are left
   #peaksToKeep = intersect(regionsWithReads, daRegions)
+  peaksToKeep = regionsWithReads
   #Remove regions in X and Y chromosomes
   peaksToKeep <- Filter(function(x) !any(grepl("chrX", x)), peaksToKeep)
   peaksToKeep <- Filter(function(x) !any(grepl("chrY", x)), peaksToKeep)
@@ -148,6 +149,7 @@ close(pb)
 
 #Remove missing values
 inputDF<-subset(inputDF, inputDF$peak!="")
+
 
 #Save dataframe
 if (!dir.exists(file.path ('data'))){

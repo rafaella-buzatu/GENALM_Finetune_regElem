@@ -13,13 +13,14 @@ from transformers import (
 )
 import random
 import numpy as np
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support, roc_auc_score
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from sklearn.utils import shuffle
 from collections import Counter
 from operator import itemgetter
 import pandas as pd
 import os
 import pickle
+import tqdm
 
 def savePickl (pathToFolder, fileName, objectName):
     
@@ -191,20 +192,41 @@ def encode(dataset, tokenizer):
     return datasetHF
 
 
+def getPredictions (testSet, model, tokenizer, device, batchSize):
+    
+    lossTotal = []
+    predictionsTotal = []
+    accTotal = []
+    
+    for i in tqdm.tqdm(range (0, len(testSet), batchSize)):
+        testSetBatch = testSet.iloc[i: i+batchSize, ]
+        loss, predictions, acc = predictMultiple (testSetBatch, model, tokenizer, device)
+        lossTotal.append(loss)
+        predictionsTotal.extend(predictions)
+        accTotal.append(acc)
+        
+    lossFinal = sum(lossTotal) / len(lossTotal)
+    accFinal = sum(accTotal) / len(accTotal)
+    
+    return lossFinal, predictionsTotal, accFinal
+    
+    
+    
+
 def predictMultiple (testSet, model, tokenizer, device):
     
     inputs = tokenizer(testSet['peaks'].tolist(), 
                        max_length=4096, return_tensors="pt",
                        padding=True, truncation=True)
     inputs.to(device)
-    labels = torch.tensor(testSet['label'])  # Batch size 1
+    labels = torch.tensor(testSet['label'].values)
+    labels = labels.to(device)
     
     with torch.no_grad():
         outputs = model(**inputs, labels=labels)
     loss, logits = outputs[:2]
     
-    
-    predictions = np.argmax(logits, axis=1)
+    predictions = np.argmax(logits.cpu(), axis=1)
     acc = accuracy_score(labels, predictions)
 
     

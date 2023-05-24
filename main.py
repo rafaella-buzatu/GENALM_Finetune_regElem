@@ -8,7 +8,7 @@ Created on Tue May  9 11:36:03 2023
 import pandas as pd
 from utils.model_utils import setSeed, addLabels, splitTrainTestVal, load_model
 from utils.model_utils import encode, ClassificationTrainer, compute_metrics
-from utils.model_utils import predictMultiple, savePickl
+from utils.model_utils import predictMultiple, savePickl, getPredictions
 from utils.plots import plotLoss, plotConfusionMatrices
 import os
 from transformers import TrainingArguments
@@ -84,7 +84,7 @@ training_args = TrainingArguments(
     evaluation_strategy="epoch",
     save_strategy="epoch",
     save_total_limit=2,
-    metric_for_best_model="auc",
+    metric_for_best_model="accuracy",
     load_best_model_at_end=True,
     weight_decay=0.01
 )
@@ -128,7 +128,9 @@ model.eval()
 
 testSet = pd.read_csv(os.path.join ("data/rawData", modelName, "test.csv"))
 # #Predict test set and calculate loss
-loss, predictions, accuracy = predictMultiple (testSet, model, tokenizer, device)
+#loss, predictions, accuracy = predictMultiple (testSet, model, tokenizer, device)
+
+loss, predictions, accuracy = getPredictions (testSet, model, tokenizer, device, batchSize = 8)
 
 # #Save results 
 results = {"loss": float(loss),
@@ -142,8 +144,8 @@ savePickl (pathToResults, 'results', results)
 
 
 #Load results from pickle
-with open(os.path.join(pathToResults, 'results'), 'rb') as f:
-    results = pickle.load(f)
+#with open(os.path.join(pathToResults, 'results'), 'rb') as f:
+#    results = pickle.load(f)
 
 #Plot confusion matrix
 plotConfusionMatrices (results, pathToResults, label_dict)

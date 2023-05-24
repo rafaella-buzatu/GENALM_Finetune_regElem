@@ -12,7 +12,7 @@ import os
 import pickle
 import numpy as np
 
-modelName = 'fineTuned'
+modelName = 'fineTunedSubset'
 
 #Read test set from csb
 testSet = pd.read_csv(os.path.join ("data/rawData", modelName, "test.csv"))
@@ -32,7 +32,7 @@ model_config = {
     "model_HF_path": outputDir, #path to model
     "model_HF_path_tokenizer": 'AIRI-Institute/gena-lm-bigbird-base-t2t', #path to tokenizer
     "num_classes": numClasses }
-model, tokenizer, device = load_model(model_config, return_model=True)
+model, tokenizer, device = load_model(model_config, checkGPU = False, return_model=True)
 model.eval()
 
 
