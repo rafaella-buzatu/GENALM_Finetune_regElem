@@ -14,9 +14,10 @@ import os
 from transformers import TrainingArguments
 import pickle
 
-modelName = 'fineTuned'
+modelName = 'fineTunedNoDup'
 
 sequenceDF = pd.read_csv('data/ATACpeaksPerCell.csv')
+sequenceDF = sequenceDF.drop_duplicates()
 #Add numerical labels
 sequenceDF, label_dict = addLabels(sequenceDF)
 
@@ -113,6 +114,9 @@ plotLoss (trainingLog, outputDir)
 trainer.eval_dataset=testEncodings
 trainer.evaluate()
 
+del trainEncodings
+del testEncodings
+del valEncodings
 
 #Save the model
 model.save_pretrained(outputDir)
@@ -126,11 +130,12 @@ model, tokenizer, device = load_model(model_config, return_model=True)
 model.eval()
 
 
+
 testSet = pd.read_csv(os.path.join ("data/rawData", modelName, "test.csv"))
 # #Predict test set and calculate loss
 #loss, predictions, accuracy = predictMultiple (testSet, model, tokenizer, device)
 
-loss, predictions, accuracy = getPredictions (testSet, model, tokenizer, device, batchSize = 8)
+loss, predictions, accuracy = getPredictions (testSet, model, tokenizer, device, batchSize = BATCH_SIZE)
 
 # #Save results 
 results = {"loss": float(loss),

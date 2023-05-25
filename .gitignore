@@ -10,3 +10,5 @@ outputs/results/fineTuned/results
 outputs/results/fineTuned/
 
 outputs/models/fineTuned/
+
+outputs/results/fineTunedSubset/
