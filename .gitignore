@@ -12,3 +12,11 @@ outputs/results/fineTuned/
 outputs/models/fineTuned/
 
 outputs/results/fineTunedSubset/
+
+visualiseAttention.ipynb
+
+outputs/results/fineTunedNoDup/
+
+outputs/models
+
+outputs/results/fineTunedNoDupTestOnAllPeaks/

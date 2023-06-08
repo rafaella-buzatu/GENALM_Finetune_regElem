@@ -11,6 +11,7 @@ from utils.model_utils import encode, ClassificationTrainer, compute_metrics
 from utils.model_utils import predictMultiple, savePickl, getPredictions
 from utils.plots import plotLoss, plotConfusionMatrices
 import os
+import numpy as np
 from transformers import TrainingArguments
 import pickle
 
@@ -141,7 +142,7 @@ loss, predictions, accuracy = getPredictions (testSet, model, tokenizer, device,
 results = {"loss": float(loss),
            "accuracy": accuracy,
            "true": testSet.iloc[:, -1],
-           "predictions": predictions.detach().numpy()}
+           "predictions": np.array(predictions)}
 
 
 pathToResults = os.path.join("outputs","results", modelName)

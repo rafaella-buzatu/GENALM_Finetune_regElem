@@ -12,31 +12,16 @@ import os
 import pickle
 import numpy as np
 
-modelName = 'fineTuned'
+modelName = 'fineTunedNoDup'
 
 #Read oldtest set from csb
-testSetPrev = pd.read_csv(os.path.join ("data/rawData", modelName, "test.csv"))
+testSet = pd.read_csv(os.path.join ("data/rawData", modelName, "testAllPeaks.csv"))
 
 #Get label dictionary
-possible_labels = testSetPrev.cellType.unique()
+possible_labels = testSet.cellType.unique()
 label_dict = {}
 for possible_label in possible_labels:
-    label_dict[possible_label] = np.unique(testSetPrev['label'][testSetPrev['cellType'] == possible_label])[0]
-
-
-#Get indices of test set from the main dataframe
-sequenceDF = pd.read_csv('data/ATACpeaksPerCell.csv')
-df3 = pd.merge(testSetPrev.reset_index() ,sequenceDF.reset_index(), on = ['peaks','cellType'])
-df3 = df3.drop_duplicates(subset=['index_x'])
-
-del sequenceDF
-
-#Create new test set with those indices
-sequenceDF = pd.read_csv('data/ATACpeaksPerCellAllPeaks.csv')
-testSet = sequenceDF.iloc[df3.index_y, ]
-#Add labels
-testSet['label'] = testSet.cellType.replace(label_dict)
-
+    label_dict[possible_label] = np.unique(testSet['label'][testSet['cellType'] == possible_label])[0]
 
 #Set output path and class number
 outputDir = os.path.join("outputs", "models", modelName)
@@ -61,7 +46,7 @@ results = {"loss": float(loss),
            "predictions": np.array(predictions)}
 
 
-pathToResults = os.path.join("outputs","results", 'fineTunedTestonAllPeaks')
+pathToResults = os.path.join("outputs","results", 'fineTunedNoDupTestonAllPeaks')
 savePickl (pathToResults, 'results', results)
 
 

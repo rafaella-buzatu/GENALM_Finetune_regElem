@@ -12,7 +12,7 @@ import os
 import pickle
 import numpy as np
 
-modelName = 'fineTuned'
+modelName = 'fineTunedNoDup'
 
 #Read test set from csb
 testSet = pd.read_csv(os.path.join ("data/rawData", modelName, "test.csv"))
