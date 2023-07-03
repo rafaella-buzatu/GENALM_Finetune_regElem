@@ -17,7 +17,7 @@ def plotConfusionMatrices(results, pathToPlots, label_dict):
     CM = confusion_matrix(results['true'], results['predictions'])
     cm_df = pd.DataFrame(CM, index = label_dict.keys(), columns = label_dict.keys())
     plt.figure(figsize=(8, 6), dpi=200)
-    sns.heatmap(cm_df, annot=True)
+    sns.heatmap(cm_df, annot=True, fmt='g')
     plt.title('Confusion Matrix')
     plt.ylabel('Actal Values')
     plt.xlabel('Predicted Values')

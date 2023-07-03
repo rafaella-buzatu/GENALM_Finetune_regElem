@@ -74,3 +74,17 @@ onlyGL = list(set(list(set(GL) - set(NN)))-set(GB))
 #writeListToFile(pathToResults, 'featuresOnlyGABA.txt', onlyGB)
 writeListToMEME(pathToResults, 'GABAtoMEME.meme', onlyGB)
 writeListToMEME(pathToResults, 'GLUTtoMEME.meme', onlyGL)
+
+#q-value: corrected p-value
+#Extract significant results for GABAergic and Glutamatergic
+GBmeme = pd.read_excel(os.path.join(pathToResults, 'tomtomGABA.xlsx'))
+GBmeme = GBmeme[GBmeme['q-value'] <= 0.05]
+
+GLmeme = pd.read_excel(os.path.join(pathToResults, 'tomtomGLUT.xlsx'))
+GLmeme = GLmeme[GLmeme['q-value'] <= 0.05]
+
+#commonGL_GB = set(GLmeme['Target_ID'].tolist()).intersection(GBmeme['Target_ID'].tolist())
+
+#Extract unique target IDs for each cell type
+onlyGB_TFs = set(GBmeme['Target_ID'].tolist()) - set((GLmeme['Target_ID'].tolist()))
+onlyGL_TFs = set(GLmeme['Target_ID'].tolist()) - set((GBmeme['Target_ID'].tolist()))

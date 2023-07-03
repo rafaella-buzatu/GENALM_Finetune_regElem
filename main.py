@@ -10,6 +10,7 @@ from utils.model_utils import setSeed, addLabels, splitTrainTestVal, load_model
 from utils.model_utils import encode, ClassificationTrainer, compute_metrics
 from utils.model_utils import predictMultiple, savePickl, getPredictions
 from utils.plots import plotLoss, plotConfusionMatrices
+from sklearn.metrics import classification_report
 import os
 import numpy as np
 from transformers import TrainingArguments
@@ -27,7 +28,7 @@ setSeed (seed_val = 10)
 
 #Split into training and test
 trainSet, testSet, valSet = splitTrainTestVal (sequenceDF,
-                                               testSize = 0.2, 
+                                               testSize = 0.2,
                                                valSize = 0.2)
 
 #Save to csv
@@ -150,8 +151,11 @@ savePickl (pathToResults, 'results', results)
 
 
 #Load results from pickle
-#with open(os.path.join(pathToResults, 'results'), 'rb') as f:
-#    results = pickle.load(f)
+with open(os.path.join(pathToResults, 'results'), 'rb') as f:
+    results = pickle.load(f)
 
 #Plot confusion matrix
 plotConfusionMatrices (results, pathToResults, label_dict)
+
+#Show classification report
+print (classification_report(results['true'], results['predictions'], target_names = label_dict.keys()))

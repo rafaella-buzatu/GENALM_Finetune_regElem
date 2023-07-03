@@ -8,6 +8,7 @@ Created on Tue May  9 11:36:03 2023
 import pandas as pd
 from utils.model_utils import  load_model, getPredictions, savePickl
 from utils.plots import plotConfusionMatrices
+from sklearn.metrics import classification_report
 import os
 import pickle
 import numpy as np
@@ -22,6 +23,8 @@ possible_labels = testSet.cellType.unique()
 label_dict = {}
 for possible_label in possible_labels:
     label_dict[possible_label] = np.unique(testSet['label'][testSet['cellType'] == possible_label])[0]
+
+label_dict = dict(sorted(label_dict.items(), key=lambda x:x[1]))
 
 #Set output path and class number
 outputDir = os.path.join("outputs", "models", modelName)
@@ -56,3 +59,5 @@ with open(os.path.join(pathToResults, 'results'), 'rb') as f:
 
 #Plot confusion matrix
 plotConfusionMatrices (results, pathToResults, label_dict)
+#Show classification report
+print (classification_report(results['true'], results['predictions'], target_names = label_dict.keys()))

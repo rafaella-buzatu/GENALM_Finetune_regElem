@@ -49,14 +49,15 @@ def addLabels(dataset):
     
     return dataset, label_dict
 
-def  splitTrainTestVal (inputDF, testSize, valSize):
+def  splitTrainTestVal (inputDF, testSize, valSize = None):
     
     #Get number of records for smallest class
     minClass, minClassCount = min(Counter(inputDF['label']).items(), key=itemgetter(1))
     
     balancedDFTest = pd.DataFrame()
     balancedDFTrain = pd.DataFrame()
-    balancedDFVal = pd.DataFrame()
+    if (valSize is not None):
+        balancedDFVal = pd.DataFrame()
     
     #Balance the classes
     for label in np.unique(inputDF['label']):
@@ -68,27 +69,32 @@ def  splitTrainTestVal (inputDF, testSize, valSize):
         indices = inputDFClass.reset_index().index.tolist()
         #Get test index
         testIndex = random.sample(indices, int(testSize*len(indices)))
-        trainValIndex = list(set(indices) - set(testIndex))
-        #Get validation indices
-        valIndex = random.sample(trainValIndex, int(valSize*len(trainValIndex)))
-        #Get training idices
-        trainIndex = list(set(trainValIndex) - set(valIndex))
-        #Subset the dataframe using the train and test indices
-        trainSet = inputDFClass.iloc[trainIndex, :]
-        valSet = inputDFClass.iloc[valIndex, :]
         testSet = inputDFClass.iloc[testIndex, :]
         #append to new DFs
         balancedDFTest = pd.concat ([balancedDFTest, testSet])
-        balancedDFTrain = pd.concat ([balancedDFTrain, trainSet])
-        balancedDFVal = pd.concat ([balancedDFVal, valSet])
         
-    
-    #Shuffle train and validation sets
-    balancedDFTrain = shuffle(balancedDFTrain)
-    balancedDFVal = shuffle(balancedDFVal, random_state = 10)
+        trainValIndex = list(set(indices) - set(testIndex))
+        if (valSize is not None):
+            #Get validation indices
+            valIndex = random.sample(trainValIndex, int(valSize*len(trainValIndex)))
+            #Get training idices
+            trainIndex = list(set(trainValIndex) - set(valIndex))
+            #Subset the dataframe using the train and test indices
+            trainSet = inputDFClass.iloc[trainIndex, :]
+            valSet = inputDFClass.iloc[valIndex, :]
+            balancedDFVal = pd.concat ([balancedDFVal, valSet])
+            balancedDFVal = shuffle(balancedDFVal, random_state = 10)
 
-    
-    return balancedDFTrain, balancedDFTest, balancedDFVal
+        else:
+            trainSet = inputDFClass.iloc[trainValIndex, :]
+            
+        balancedDFTrain = pd.concat ([balancedDFTrain, trainSet])
+        balancedDFTrain = shuffle(balancedDFTrain, random_state = 10)
+
+    if (valSize is not None):
+        return balancedDFTrain, balancedDFTest, balancedDFVal
+    else:
+        return balancedDFTrain, balancedDFTest
 
 
 

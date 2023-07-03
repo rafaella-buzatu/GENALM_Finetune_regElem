@@ -1,7 +1,9 @@
 import torch
 import matplotlib.pyplot as plt
+import xmltodict
 import numpy as np
 import os
+import urllib
 
 def format_attention(attention):
     '''Convert the attention matrix from tuple to tensor.
@@ -16,7 +18,36 @@ def format_attention(attention):
     # num_layers x num_heads x seq_len x seq_len
     return torch.stack(squeezed)
 
+def getSequence(chromosome, start, end, refGenome = 'hg38'):
+    """
+    Returns the DNA sequence 
 
+    Parameters
+    ----------
+    chromosome : string
+        The chromosome number.
+    start : string
+        The starting position of the DNA sequence.
+    end : string
+        The end position of the DNA sequence.
+    refGenome: string
+        The reference genome to use to extract the DNA sequence.
+        { 'hg38' - default; 'hg19'}
+        
+
+    Returns
+    -------
+    sequence : string
+        The DNA sequence corresponding to the input location.
+
+    """
+    base = 'http://genome.ucsc.edu/cgi-bin/das/' + refGenome + '/dna?segment='
+    url = base + chromosome + ':' + str(start) + ',' + str(end)
+    response = urllib.request.urlopen(url).read()
+    data = xmltodict.parse(response)
+    sequence = data['DASDNA']['SEQUENCE']['DNA']['#text'].upper().replace('\n','')
+    
+    return sequence
 
 def get_attention(model, tokenizer, device, sentence_a):
     ''' Get an attention score for each token of a sentence.
@@ -83,48 +114,39 @@ def get_indices_of_high_value_subsets(lst, threshold):
     return subsets_indices
 
     
-def plot_heatmap(seq, heatmap, input_text, DNAregions, pathToPlots):
+def plot_heatmap(heatmap, sequence, location, pathToPlots, fileName):
     '''Plot the heatmap of the attention scores for a given sequence.
     '''
     #for i in range(len(sequencesToPlot)):
     plt.rcParams["figure.figsize"] = 20,2
 
-    #Lengthen the sequence to plot if it is too short
-    if(len(seq)<20):
-       seqToPlot = list(range(seq[0] - 20, seq[-1] + 20))
-    else:
-        seqToPlot = seq
-    x = np.linspace(0, len(seqToPlot), len(seqToPlot))
-    y = np.asarray([heatmap[i] for i in seqToPlot])
-
+    x = np.linspace(0, len(heatmap), len(heatmap))
+        
+    y = np.asarray(heatmap)
+        
     fig, (ax,ax2) = plt.subplots(nrows=2, sharex=True)
-    extent = [-0.1,  len(seqToPlot)-0.9, 0, 1]
+    extent = [-0.1,  len(heatmap)-0.9, 0, 1]
     im = ax.imshow(y[np.newaxis,:], aspect="auto", extent=extent)
     fig.colorbar(im, ax= ax, orientation='horizontal', location = 'top')
 
     #Set ticks and labels
     ax.set_yticks([])
-    ax2.set_xticks(ticks = [i for i in range( len(seqToPlot))], labels = [input_text[i] for i in seqToPlot])
+    ax2.set_xticks(ticks = [i for i in range( len(heatmap))], labels = [sequence[i] for i in range(len(heatmap))])
     #ax2.set_xticklabels([input_text[i]+str(i) for i in seqToPlot])
     ax.set_xlim(extent[0], extent[1])
     ax2.plot(x,y)
 
-    ## Find the location of the sequence in the genome
-    seqToFind = ''.join ([input_text[i] for i in seqToPlot])
-    chromosomeLocation =  DNAregions.loc[DNAregions['DNAseq'].str.contains(seqToFind)]
-    shownStart= chromosomeLocation['start'].values[0] + chromosomeLocation['DNAseq'].values[0].find(seqToFind)
-    shownEnd = shownStart + len(seqToFind)
-    #Concatenate the exact location in a string
-    text = str(chromosomeLocation['seqnames'].values[0]) + ':' + str(shownStart) + '-' + str(shownEnd)
     #Add the location to the plot
-    ax.text(0, 1.5, text, transform=ax.transAxes, fontsize=10, verticalalignment='top')
+    if ('random' in fileName):
+        location = location + ' shuffled ' + fileName.split('random')[1]
+    ax.text(0, 1.5, location, transform=ax.transAxes, fontsize=10, verticalalignment='top')
     plt.tight_layout()
-    title = str(chromosomeLocation['seqnames'].values[0]) + '_' + str(shownStart) + '_' + str(shownEnd)
-    plt.savefig(os.path.join(pathToPlots, title +'.png'))
+    plt.savefig(os.path.join(pathToPlots, fileName +'.png'))
     plt.show()
 
 
-def getFeatures (input_text, DNAregions, model, tokenizer, device, threshold, plot=False, pathToPlots = None):
+def getFeatures (input_text, DNAregions, model, tokenizer, device, threshold, 
+                 returnHeatmap = False):
         '''Get the attention scores for each character in the input_text.
         '''
 
@@ -139,32 +161,28 @@ def getFeatures (input_text, DNAregions, model, tokenizer, device, threshold, pl
         #Generate a heatmap of attention scores for each character in the input_text 
         heatmap = add_scores_to_string(input_text, attentionDict)
 
-        #Get the indices of the regions>2 where the attention score is > threshold percentile.
-        sequencesToPlot = get_indices_of_high_value_subsets(heatmap, np.percentile(heatmap,threshold))
-        
-        features = []
-        
-        #Sort by length of sequences
-        #sequencesToPlot.sort(key=len, reverse=True)
-        
-        for i in range(len(sequencesToPlot)):
-            
-            seq = sequencesToPlot[i]
-            
-            if(plot):
-                #Only plot 15 longest sequences
-                if (i<=5):
-                    plot_heatmap(seq, heatmap, input_text, DNAregions, pathToPlots)
-            
-            if(len(seq)<4):
-                
-                motif =''.join( [input_text[i] for i in list(range(seq[0] -1, seq[-1] + 1))])
-            else:
-                motif = ''.join ([input_text[i] for i in seq])
-            
-            features.append(motif)
+        if (returnHeatmap):
+            return heatmap
+        else:
+            #Get the indices of the regions>2 where the attention score is > threshold percentile.
+            sequencesAttention = get_indices_of_high_value_subsets(heatmap, np.percentile(heatmap,threshold))
+            #Empty list to store important tokens
+            features = []
 
-        return features
+            #Iterate over the selected high attention regions
+            for i in range(len(sequencesAttention)):
+
+                seq = sequencesAttention[i]
+                #Extract motif of at least 5 bases
+                if(len(seq)<4):
+                    
+                    motif =''.join( [input_text[i] for i in list(range(seq[0] -1, seq[-1] + 1))])
+                else:
+                    motif = ''.join ([input_text[i] for i in seq])
+                
+                features.append(motif)
+    
+            return features
     
 def writeListToFile(pathToDir, filename, lst):
     with open(os.path.join(pathToDir, filename), 'w') as file:
@@ -191,3 +209,11 @@ def writeListToMEME (pathToDir, filename, tokenList):
             for p in ppm:
                 meme.write(" ".join(map(str, p)))
                 meme.write("\n")
+                
+def writeListToBed (pathToDir, filename, positions, chromosome):
+    with open(os.path.join(pathToDir, filename), 'w') as bed:
+        for i in range(len(positions)):
+            line = '\t'.join([chromosome, str(positions[i]), str(positions[i])])
+            bed.write(line)
+            bed.write("\n")
+                
