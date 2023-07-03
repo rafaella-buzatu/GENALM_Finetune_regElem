@@ -1,9 +1,12 @@
 # GENALM_Finetune_regElem
 
-main.py: main model trained on data from getInput.R (DA peaks and peaks with reads >90%)
-main2.py: model trained on data from getInput.R, only GABAergic and Glutamatergic
+### Finetune the model 
+*main.py*: The script containing all the necessary commands to run the triaining and test cycle on a previously generated dataset. <br>
+*mainTest.py*: The script containing all the necessary commands to run a test cycle. <br>
+*getInput.R*: The script containing all necessary commands to generate the input dataset that was used to train and test the model. <br>
+*da.R*: <br>
 
-mainTest.py: test for main.py
-mainTest2.py: test for main2.py
-mainTestNewData.py: test on dataset from getInput2.R (peaks with reads >90%)
-
+### Visualise important tokens
+*visualiseAttention.py*:  <br>
+*generateFeatures.py*: <br>
+*checkOverlap.R*: <br>
