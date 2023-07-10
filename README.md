@@ -9,8 +9,8 @@
 ### Second test set
 *newTestData.py*: Extract all peaks from the previous test dataset (without DAR intersection)<br>
 *mainTestNewData.py*: The script containing all the necessary commands to run a test cycle on the new dataset from newTestData.py. <br>
+<b4>
 
-<br>
 ### Finetune model 2
 *getInputTest2.R*: The script containing all necessary commands to generate the input dataset when splitting DARs between training and test. <br>
 *mainTest2.py*: The script containing all the necessary commands to run the triaining and test cycle on a previously generated dataset from getInput2.R. <br>
